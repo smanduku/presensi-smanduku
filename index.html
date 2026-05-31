@@ -1202,7 +1202,7 @@ function switchView(viewId, isSistemBack = false) {
                     alasanHtml = `<div class="text-secondary mt-1 small d-block" style="font-size: 11px; line-height: 1.3;"><strong>Alasan:</strong> ${item.alasan}</div>`;
                 }
 
-                                // --- PERBAIKAN UTAMA LOKASI: FORCE POLOS 6 DIGIT & ANTI ERROR WEBVIEW ---
+                // --- PERBAIKAN UTAMA LOKASI: FORCE POLOS 6 DIGIT & ANTI ERROR WEBVIEW ---
                 let lokasiHtml = "";
                 if (!item.isBelum && !item.isIzin && item.lokasi && item.lokasi !== "-") {
                     let textLokasi = item.lokasi;
@@ -1212,12 +1212,13 @@ function switchView(viewId, isSistemBack = false) {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                        // Perbaikan Final: Menggunakan Link Universal Resmi Google Maps API
+                        // Solusi Final: Menggunakan Link Universal Resmi Google Maps Search API
+                        // Link ini kebal terhadap error intent:// di aplikasi Android
                         let linkMaps = `https://www.google.com/maps/search/?api=1&query=${latClean},${lngClean}`;
                         
                         lokasiHtml = `
                         <a href="${linkMaps}" target="_blank" class="text-primary mt-2 small d-inline-flex align-items-center text-decoration-none" style="font-size: 11px; background: #e8f0fe; padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <span class="material-icons me-1" style="font-size: 14px;">satellite_alt</span> ${textLokasi}
+                            <span class="material-icons me-1" style="font-size: 14px;">map</span> ${textLokasi}
                         </a>`;
                     } else {
                         lokasiHtml = `
