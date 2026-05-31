@@ -1297,7 +1297,7 @@ function bukaMenuKepsek() {
                     alasanHtml = `<div class="text-secondary mt-1 small d-block" style="font-size: 11px; line-height: 1.3;"><strong>Alasan:</strong> ${item.alasan}</div>`;
                 }
 
-                // --- PERBAIKAN UTAMA LOKASI: SEJAJAR DENGAN JAM & GANTI IKON ---
+                // --- PERBAIKAN UTAMA LOKASI: FORMAT RESMI API MAPS & ANTI WEBVIEW BLOCK ---
                 let lokasiHtml = "";
                 if (!item.isBelum && !item.isIzin && item.lokasi && item.lokasi !== "-") {
                     let textLokasi = item.lokasi;
@@ -1307,12 +1307,12 @@ function bukaMenuKepsek() {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                        // Format link Maps standar
-                        let linkMaps = `https://maps.google.com/?q=${latClean},${lngClean}`;
+                        // Menggunakan URL Universal Resmi dari Google Maps API
+                        let linkMaps = `https://www.google.com/maps/search/?api=1&query=${latClean},${lngClean}`;
                         
-                        // Menghapus kotak background agar menyatu dengan baris, ubah ikon ke location_on
+                        // Hapus target="_blank" (yang sering diblokir webview) dan ganti ke target="_top"
                         lokasiHtml = `
-                        <a href="${linkMaps}" target="_blank" class="text-primary ms-2 fw-bold text-decoration-none" style="font-size: 10px;">
+                        <a href="${linkMaps}" target="_top" class="text-primary ms-2 fw-bold text-decoration-none" style="font-size: 10px;">
                             <span class="material-icons align-middle" style="font-size: 11px;">location_on</span> ${textLokasi}
                         </a>`;
                     } else {
