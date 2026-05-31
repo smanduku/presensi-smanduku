@@ -1255,7 +1255,7 @@ function switchView(viewId, isSistemBack = false) {
                     alasanHtml = `<div class="text-secondary mt-1 small d-block" style="font-size: 11px; line-height: 1.3;"><strong>Alasan:</strong> ${item.alasan}</div>`;
                 }
 
-                // --- PERBAIKAN UTAMA LOKASI: FORCE POLOS 6 DIGIT & ANTI ERROR WEBVIEW ---
+                // --- PERBAIKAN UTAMA LOKASI: SEJAJAR DENGAN JAM & GANTI IKON ---
                 let lokasiHtml = "";
                 if (!item.isBelum && !item.isIzin && item.lokasi && item.lokasi !== "-") {
                     let textLokasi = item.lokasi;
@@ -1265,16 +1265,18 @@ function switchView(viewId, isSistemBack = false) {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                        let linkMaps = `https://www.google.com/maps/search/?api=1&query=$?q=${latClean},${lngClean}`;
+                        // Format link Maps standar
+                        let linkMaps = `https://maps.google.com/?q=${latClean},${lngClean}`;
                         
+                        // Menghapus kotak background agar menyatu dengan baris, ubah ikon ke location_on
                         lokasiHtml = `
-                        <a href="${linkMaps}" target="_blank" class="text-primary mt-2 small d-inline-flex align-items-center text-decoration-none" style="font-size: 11px; background: #e8f0fe; padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <span class="material-icons me-1" style="font-size: 14px;">map</span> ${textLokasi}
+                        <a href="${linkMaps}" target="_blank" class="text-primary ms-2 fw-bold text-decoration-none" style="font-size: 10px;">
+                            <span class="material-icons align-middle" style="font-size: 11px;">location_on</span> ${textLokasi}
                         </a>`;
                     } else {
                         lokasiHtml = `
-                        <span class="text-danger mt-2 small d-inline-flex align-items-center" style="font-size: 11px; background: #fce8e6; padding: 4px 8px; border-radius: 6px;">
-                            <span class="material-icons me-1" style="font-size: 14px;">location_off</span> ${textLokasi}
+                        <span class="text-danger ms-2 fw-bold" style="font-size: 10px;">
+                            <span class="material-icons align-middle" style="font-size: 11px;">location_off</span> ${textLokasi}
                         </span>`;
                     }
                 }
@@ -1299,12 +1301,12 @@ function switchView(viewId, isSistemBack = false) {
                     <div class="card-body p-2 d-flex justify-content-between align-items-center">
                         <div class="flex-grow-1 overflow-hidden">
                             <h6 class="mb-0 fw-bold small text-truncate ${item.isBelum ? 'text-muted' : ''}">${item.nama}</h6>
-                            <div class="d-flex align-items-center mt-1">
+                            <div class="d-flex align-items-center mt-1 flex-wrap">
                                 <span class="badge ${badgeClass} rounded-pill" style="font-size: 9px;">${item.status}</span>
                                 <small class="text-muted fw-bold ms-2" style="font-size: 10px;"><span class="material-icons align-middle" style="font-size: 11px;">schedule</span> ${item.waktu}</small>
+                                ${lokasiHtml} 
                             </div>
                             ${alasanHtml}
-                            ${lokasiHtml} 
                         </div>
                         ${fotoHtml}
                     </div>
