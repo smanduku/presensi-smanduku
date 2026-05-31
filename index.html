@@ -1112,8 +1112,9 @@ function switchView(viewId, isSistemBack = false) {
             
             // Masukkan link Google Maps format Embed ke dalam iframe
             const iframe = document.getElementById('iframe-gmaps');
-            // PERBAIKAN: Format URL disesuaikan agar berjalan lancar di Iframe
-            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&hl=id&z=17&output=embed`;
+            
+            // PERBAIKAN: Menggunakan URL Embed standar dan menambahkan &t=h (Satelit Hybrid)
+            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&hl=id&z=17&t=h&output=embed`;
             
             // Tambahkan jejak URL agar tombol back fisik HP menutup peta, bukan keluar aplikasi
             history.pushState({ halaman: 'view-kepsek', modalPeta: true }, "", "#lihat-peta");
