@@ -1095,19 +1095,34 @@ function switchView(viewId, isSistemBack = false) {
             }
         }
 
-        function bukaMenuKepsek() {
+function bukaMenuKepsek() {
             if (!navigator.onLine) {
                 showCustomAlert("Fitur pantauan hanya bisa diakses saat perangkat Online.", 'error');
                 return;
             }
             switchView('view-kepsek');
             
-            // Set input kalender otomatis ke tanggal hari ini saat menu dibuka
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            document.getElementById('tanggal-pantau').value = `${yyyy}-${mm}-${dd}`;
+            // --- PERBAIKAN: Cek apakah ada riwayat tanggal & sesi terakhir di memori ---
+            let memoriTanggal = sessionStorage.getItem('kepsekLastDate');
+            let memoriSesi = sessionStorage.getItem('kepsekLastSesi');
+
+            if (memoriTanggal) {
+                // Gunakan tanggal yang terakhir dipilih
+                document.getElementById('tanggal-pantau').value = memoriTanggal;
+            } else {
+                // Jika kosong, baru gunakan tanggal hari ini
+                const today = new Date();
+                const yyyy = today.getFullYear();
+                const mm = String(today.getMonth() + 1).padStart(2, '0');
+                const dd = String(today.getDate()).padStart(2, '0');
+                document.getElementById('tanggal-pantau').value = `${yyyy}-${mm}-${dd}`;
+            }
+
+            if (memoriSesi) {
+                // Kembalikan ke sesi terakhir (Pagi/Siang)
+                document.getElementById('pilih-sesi-pantau').value = memoriSesi;
+                modeSesiAktif = memoriSesi;
+            }
 
             tarikDataKepsek(); 
         }
@@ -1115,8 +1130,12 @@ function switchView(viewId, isSistemBack = false) {
         function tarikDataKepsek() {
             document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Menarik data presensi...</p></div>';
             
-            // Ambil tanggal dari input, lalu ubah formatnya dari YYYY-MM-DD menjadi DD-MM-YYYY
+            // Ambil tanggal dari input
             let tglInput = document.getElementById('tanggal-pantau').value;
+            
+            // --- PERBAIKAN: Simpan tanggal yang sedang diklik ke memori HP ---
+            sessionStorage.setItem('kepsekLastDate', tglInput);
+            
             let tglFormatted = "";
             if(tglInput) {
                 let parts = tglInput.split("-");
@@ -1125,15 +1144,14 @@ function switchView(viewId, isSistemBack = false) {
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                // Kirimkan tanggal yang dipilih ke server
                 body: JSON.stringify({ action: 'pantau_kepsek', tanggal: tglFormatted })
             })
             .then(response => response.json())
             .then(res => {
                 if(res.status === 'success') {
                     dataKepsekHariIni = res.data;
-                    document.getElementById('pilih-sesi-pantau').value = 'masuk'; // Reset view ke pagi
-                    gantiSesiPantau(); // Proses render
+                    // --- PERBAIKAN: Hapus baris yang memaksa dropdown kembali ke 'masuk' ---
+                    gantiSesiPantau(); // Langsung render sesuai sesi aktif saat ini
                 } else {
                     document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat data presensi.</p>';
                 }
@@ -1142,9 +1160,13 @@ function switchView(viewId, isSistemBack = false) {
                 document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi saat memuat data.</p>';
             });
         }
-        // FUNGSI BARU UNTUK SAKELAR PAGI / SIANG
+        // FUNGSI UNTUK SAKELAR PAGI / SIANG
         function gantiSesiPantau() {
             modeSesiAktif = document.getElementById('pilih-sesi-pantau').value;
+            
+            // --- PERBAIKAN: Simpan sesi yang dipilih ke memori HP ---
+            sessionStorage.setItem('kepsekLastSesi', modeSesiAktif);
+            
             filterDataKepsek('semua');
         }
 
