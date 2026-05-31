@@ -289,12 +289,16 @@
             <span class="material-icons me-3" style="font-size: 28px; cursor: pointer;" onclick="switchView('view-dashboard')">arrow_back</span>
             <div class="flex-grow-1">
                 <h5 class="mb-0 fw-bold">Pantauan Harian</h5>
-                <select id="pilih-sesi-pantau" class="form-select form-select-sm mt-2 fw-bold text-primary border-primary" style="max-width: 200px; background-color: #e8f0fe;" onchange="gantiSesiPantau()">
-                    <option value="masuk">Absen Pagi (MASUK)</option>
-                    <option value="pulang">Absen Siang (PULANG)</option>
-                </select>
+                <div class="d-flex gap-2 mt-2">
+                    <input type="date" id="tanggal-pantau" class="form-control form-control-sm fw-bold text-primary border-primary" style="background-color: #e8f0fe; max-width: 140px;" onchange="tarikDataKepsek()">
+                    <select id="pilih-sesi-pantau" class="form-select form-select-sm fw-bold text-primary border-primary" style="background-color: #e8f0fe; flex-grow: 1;" onchange="gantiSesiPantau()">
+                        <option value="masuk">Absen Pagi (MASUK)</option>
+                        <option value="pulang">Absen Siang (PULANG)</option>
+                    </select>
+                </div>
             </div>
         </div>
+    </div>
 
         <div class="row g-2 mb-3">
             <div class="col-6">
@@ -1071,21 +1075,38 @@ function switchView(viewId, isSistemBack = false) {
                 return;
             }
             switchView('view-kepsek');
-            document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Menarik data presensi hari ini...</p></div>';
             
-            // Nanti di sini kita buat fetch() memanggil Code.gs untuk mengambil datanya
+            // Set input kalender otomatis ke tanggal hari ini saat menu dibuka
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            document.getElementById('tanggal-pantau').value = `${yyyy}-${mm}-${dd}`;
+
             tarikDataKepsek(); 
-            }
+        }
+
         function tarikDataKepsek() {
+            document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Menarik data presensi...</p></div>';
+            
+            // Ambil tanggal dari input, lalu ubah formatnya dari YYYY-MM-DD menjadi DD-MM-YYYY
+            let tglInput = document.getElementById('tanggal-pantau').value;
+            let tglFormatted = "";
+            if(tglInput) {
+                let parts = tglInput.split("-");
+                tglFormatted = parts[2] + "-" + parts[1] + "-" + parts[0];
+            }
+
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                body: JSON.stringify({ action: 'pantau_kepsek' })
+                // Kirimkan tanggal yang dipilih ke server
+                body: JSON.stringify({ action: 'pantau_kepsek', tanggal: tglFormatted })
             })
             .then(response => response.json())
             .then(res => {
                 if(res.status === 'success') {
                     dataKepsekHariIni = res.data;
-                    document.getElementById('pilih-sesi-pantau').value = 'masuk'; // Reset ke pagi
+                    document.getElementById('pilih-sesi-pantau').value = 'masuk'; // Reset view ke pagi
                     gantiSesiPantau(); // Proses render
                 } else {
                     document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat data presensi.</p>';
@@ -1095,7 +1116,6 @@ function switchView(viewId, isSistemBack = false) {
                 document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi saat memuat data.</p>';
             });
         }
-
         // FUNGSI BARU UNTUK SAKELAR PAGI / SIANG
         function gantiSesiPantau() {
             modeSesiAktif = document.getElementById('pilih-sesi-pantau').value;
@@ -1212,7 +1232,7 @@ function switchView(viewId, isSistemBack = false) {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                        // Solusi Final: Menggunakan Link Universal Resmi Google Maps Search API
+                    // Solusi Final: Menggunakan Link Universal Resmi Google Maps Search API
                         // Link ini kebal terhadap error intent:// di aplikasi Android
                         let linkMaps = `https://www.google.com/maps/search/?api=1&query=${latClean},${lngClean}`;
                         
