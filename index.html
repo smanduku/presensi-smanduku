@@ -1125,17 +1125,33 @@ function switchView(viewId, isSistemBack = false) {
         function filterDataKepsek(mode) {
             const container = document.getElementById('tempat-data-kepsek');
             
-            // --- LOGIKA SEMBUNYIKAN TERLAMBAT SAAT ABSEN PULANG ---
+            // --- LOGIKA BARU: KARTU DINAMIS SESI PULANG (PISAHKAN ALPA) ---
             if (modeSesiAktif === 'pulang') {
-                document.getElementById('wadah-terlambat').classList.add('d-none');
-                document.getElementById('wadah-izin').className = "col-12"; 
-                if (mode === 'terlambat') mode = 'semua'; 
-            } else {
+                // Munculkan kembali wadah yang sebelumnya disembunyikan
                 document.getElementById('wadah-terlambat').classList.remove('d-none');
                 document.getElementById('wadah-izin').className = "col-6"; 
+                
+                // Ubah kartu Terlambat menjadi kartu Tidak Absen Pagi (Alpa)
+                let cardTelat = document.getElementById('card-filter-terlambat');
+                cardTelat.className = "card border-0 shadow-sm rounded-3 text-center p-2 bg-dark text-white";
+                cardTelat.innerHTML = `
+                    <small style="font-size: 10px; font-weight: bold; letter-spacing: 0.5px;">TIDAK ABSEN PAGI</small>
+                    <h4 class="fw-bold mb-0 mt-1" id="kepsek-terlambat">-</h4>
+                `;
+            } else {
+                // Kembalikan ke format kartu Terlambat (Sesi Pagi)
+                document.getElementById('wadah-terlambat').classList.remove('d-none');
+                document.getElementById('wadah-izin').className = "col-6"; 
+                
+                let cardTelat = document.getElementById('card-filter-terlambat');
+                cardTelat.className = "card border-0 shadow-sm rounded-3 text-center p-2 bg-danger text-white";
+                cardTelat.innerHTML = `
+                    <small style="font-size: 10px; font-weight: bold; letter-spacing: 0.5px;">TERLAMBAT</small>
+                    <h4 class="fw-bold mb-0 mt-1" id="kepsek-terlambat">-</h4>
+                `;
             }
             
-            // Tampilan Tombol
+            // Tampilan Tombol Opacity
             document.getElementById('card-filter-hadir').style.opacity = (mode === 'semua' || mode === 'hadir') ? '1' : '0.4';
             document.getElementById('card-filter-belum').style.opacity = (mode === 'semua' || mode === 'belum') ? '1' : '0.4';
             document.getElementById('card-filter-terlambat').style.opacity = (mode === 'semua' || mode === 'terlambat') ? '1' : '0.4';
@@ -1150,12 +1166,21 @@ function switchView(viewId, isSistemBack = false) {
 
             dataKepsekHariIni.forEach(item => {
                 let statusAktif = (modeSesiAktif === 'masuk') ? item.status_masuk : item.status_pulang;
+                
+                // --- LOGIKA PEMISAH GURU BOLOS/TIDAK ABSEN MASUK ---
+                let isAlpa = false;
+                if (modeSesiAktif === 'pulang' && item.status_masuk.toLowerCase() === "belum absen" && item.status_pulang.toLowerCase() === "belum absen") {
+                    statusAktif = "Tidak Absen Pagi"; // Timpa label statusnya
+                    isAlpa = true;
+                }
+
                 let sLow = statusAktif.toLowerCase();
                 
                 let isHadir = sLow.includes("tepat") || sLow.includes("terlambat") || sLow.includes("sudah pulang");
-                let isBelum = sLow.includes("belum");
-                let isTelat = sLow.includes("terlambat");
-                let isIzin = !isHadir && !isBelum; 
+                let isBelum = sLow === "belum absen"; // Hanya hitung yang murni "belum absen"
+                // Gunakan wadah 'isTelat' untuk menampung Alpa pada sesi pulang
+                let isTelat = (modeSesiAktif === 'masuk') ? sLow.includes("terlambat") : isAlpa; 
+                let isIzin = !isHadir && !isBelum && !isAlpa; 
 
                 if(isHadir) jmlHadir++;
                 if(isBelum) jmlBelum++;
@@ -1177,7 +1202,7 @@ function switchView(viewId, isSistemBack = false) {
                         foto: (modeSesiAktif === 'masuk') ? item.foto_masuk : item.foto_pulang,
                         lokasi: (modeSesiAktif === 'masuk') ? item.lokasi_masuk : item.lokasi_pulang, 
                         alasan: item.alasan_izin,
-                        isBelum: isBelum,
+                        isBelum: isBelum || isAlpa, // Supaya opacity card list tetap buram (0.6)
                         isIzin: isIzin
                     });
                 }
@@ -1187,7 +1212,7 @@ function switchView(viewId, isSistemBack = false) {
             // KODE BARU: PROSES SORTIR KRONOLOGIS (JAM TERBARU DI ATAS)
             // =======================================================
             dataTampil.sort(function(a, b) {
-                // 1. Jika salah satu belum absen, lempar ke bawah
+                // 1. Jika salah satu belum absen (atau alpa), lempar ke bawah
                 if (a.isBelum && !b.isBelum) return 1;
                 if (!a.isBelum && b.isBelum) return -1;
                 
@@ -1211,9 +1236,11 @@ function switchView(viewId, isSistemBack = false) {
 
             let htmlStr = "";
             dataTampil.forEach(item => {
+                // Penentuan Warna Lencana (Badge)
                 let badgeClass = "bg-secondary";
                 if (item.status.toLowerCase().includes("tepat") || item.status.toLowerCase().includes("sudah")) badgeClass = "bg-success";
                 else if (item.status.toLowerCase().includes("terlambat")) badgeClass = "bg-danger";
+                else if (item.status.toLowerCase().includes("tidak absen pagi")) badgeClass = "bg-dark"; // Badge Hitam untuk Alpa
                 else if (item.isIzin) badgeClass = "bg-warning text-dark"; 
 
                 let alasanHtml = "";
@@ -1231,9 +1258,7 @@ function switchView(viewId, isSistemBack = false) {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                    // Solusi Final: Menggunakan Link Universal Resmi Google Maps Search API
-                        // Link ini kebal terhadap error intent:// di aplikasi Android
-                        let linkMaps = `https://www.google.com/maps/search/?api=1&query=${latClean},${lngClean}`;
+                        let linkMaps = `https://www.google.com/maps/search/?api=1&query=$?q=${latClean},${lngClean}`;
                         
                         lokasiHtml = `
                         <a href="${linkMaps}" target="_blank" class="text-primary mt-2 small d-inline-flex align-items-center text-decoration-none" style="font-size: 11px; background: #e8f0fe; padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
