@@ -31,6 +31,19 @@
         #loading-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         #custom-alert { z-index: 10000; }
         #kamera-video, #preview-image { transform: scaleX(-1) !important; -webkit-transform: scaleX(-1) !important; aspect-ratio: 3 / 4; object-fit: cover; }
+
+        /* Perbaikan Ikon Kalender Webview / Aplikasi */
+        #tanggal-pantau::-webkit-calendar-picker-indicator {
+            background: transparent;
+            color: transparent;
+            cursor: pointer;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            left: 0;
+            top: 0;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -302,7 +315,11 @@
                 </select>
             </div>
             <div class="col-6">
-                <input type="date" id="tanggal-pantau" class="form-control fw-bold text-primary border-0 shadow-sm w-100" style="background-color: #ffffff; border-radius: 10px; font-size: 12px; padding: 8px 12px; cursor: pointer; letter-spacing: 0.3px;" onchange="tarikDataKepsek()">
+                <div class="position-relative shadow-sm" style="background-color: #ffffff; border-radius: 10px;">
+                    <span class="material-icons text-primary position-absolute" style="left: 10px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; z-index: 5;">calendar_month</span>
+                    
+                    <input type="date" id="tanggal-pantau" class="form-control fw-bold text-primary border-0 w-100 position-relative" style="background-color: transparent; border-radius: 10px; font-size: 12px; padding: 8px 10px 8px 32px; cursor: pointer; letter-spacing: 0.3px;" onchange="tarikDataKepsek()">
+                </div>
             </div>
         </div>
 
