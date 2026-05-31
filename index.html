@@ -284,18 +284,24 @@
         <p class="text-center text-muted mt-3 small">Jika ada data yang tidak sesuai, mohon hubungi Mas Kude.</p>
     </div>
 <!-- HALAMAN KEPSEK -->
-    <div id="view-kepsek" class="d-none min-vh-100 bg-light p-3 pb-5">
-        <div class="d-flex align-items-center mb-4 mt-3">
+<div id="view-kepsek" class="d-none min-vh-100 bg-light p-3 pb-5">
+        
+        <div class="d-flex align-items-center mb-3 mt-3">
             <span class="material-icons me-3" style="font-size: 28px; cursor: pointer;" onclick="switchView('view-dashboard')">arrow_back</span>
             <div class="flex-grow-1">
                 <h5 class="mb-0 fw-bold">Pantauan Harian</h5>
-                <div class="d-flex gap-2 mt-2">
-                    <input type="date" id="tanggal-pantau" class="form-control fw-bold text-primary border-0 shadow-sm" style="background-color: #ffffff; border-radius: 10px; font-size: 12px; padding: 8px 12px; max-width: 135px; cursor: pointer; letter-spacing: 0.3px;" onchange="tarikDataKepsek()">
-                    <select id="pilih-sesi-pantau" class="form-select fw-bold text-primary border-0 shadow-sm" style="background-color: #ffffff; border-radius: 10px; font-size: 12px; padding: 8px 30px 8px 12px; flex-grow: 1; cursor: pointer; letter-spacing: 0.3px;" onchange="gantiSesiPantau()">
-                        <option value="masuk">Absen Pagi (MASUK)</option>
-                        <option value="pulang">Absen Siang (PULANG)</option>
-                    </select>
-                </div>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-6">
+                <input type="date" id="tanggal-pantau" class="form-control fw-bold text-primary border-0 shadow-sm w-100" style="background-color: #ffffff; border-radius: 10px; font-size: 12px; padding: 8px 12px; cursor: pointer; letter-spacing: 0.3px;" onchange="tarikDataKepsek()">
+            </div>
+            <div class="col-6">
+                <select id="pilih-sesi-pantau" class="form-select fw-bold text-primary border-0 shadow-sm w-100" style="background-color: #ffffff; border-radius: 10px; font-size: 12px; padding: 8px 30px 8px 12px; cursor: pointer; letter-spacing: 0.3px;" onchange="gantiSesiPantau()">
+                    <option value="masuk">Absen Pagi (MASUK)</option>
+                    <option value="pulang">Absen Siang (PULANG)</option>
+                </select>
             </div>
         </div>
 
