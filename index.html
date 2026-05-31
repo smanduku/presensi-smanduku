@@ -458,15 +458,18 @@
                     verifikasiBackground();
                 }
                 
-                // Jika halaman tujuan adalah riwayat, otomatis muat ulang data riwayatnya
+                // Jika halaman tujuan butuh ditarik datanya saat HP me-reload aplikasi
                 if (halamanTujuan === 'view-riwayat') {
                     bukaRiwayat();
+                } else if (halamanTujuan === 'view-kepsek') {
+                    // TAMBAHAN: Tarik data otomatis jika kembali ke menu kepsek
+                    bukaMenuKepsek(); 
                 }
                 
-            } else {
+                } else {
                 switchView('view-login', true);
-            }
-        };
+                }
+                };
 
         // Memantau status internet HP (Otomatis sinkron jika online)
         window.addEventListener('online', function() {
