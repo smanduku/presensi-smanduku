@@ -1110,19 +1110,14 @@ function switchView(viewId, isSistemBack = false) {
             modal.classList.remove('d-none');
             modal.classList.add('d-flex');
             
-            // Inisialisasi peta Leaflet jika belum ada
-            if (!mapPopupInstance) {
-                mapPopupInstance = L.map('map-popup').setView([lat, lng], 17);
-                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    maxZoom: 19,
-                    attribution: '© Esri'
-                }).addTo(mapPopupInstance);
-                mapPopupMarker = L.marker([lat, lng]).addTo(mapPopupInstance);
-            } else {
-                // Jika sudah ada, cukup pindahkan titik kameranya
-                mapPopupInstance.setView([lat, lng], 17);
-                mapPopupMarker.setLatLng([lat, lng]);
-            }
+            // Masukkan link Google Maps format Embed ke dalam iframe
+            const iframe = document.getElementById('iframe-gmaps');
+            // parameter output=embed adalah trik agar gmaps bisa masuk iframe tanpa API Key
+            iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&hl=id&z=17&output=embed`;
+            
+            // Tambahkan jejak URL agar tombol back fisik HP menutup peta, bukan keluar aplikasi
+            history.pushState({ halaman: 'view-kepsek', modalPeta: true }, "", "#lihat-peta");
+        }
             
             // Wajib: Perbaiki tampilan peta yang tertutup / abu-abu di dalam modal
             setTimeout(() => {
