@@ -69,6 +69,16 @@
         </div>
         <img id="img-foto-full" src="" style="max-width: 90%; max-height: 80vh; object-fit: contain; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
     </div>
+
+    <div id="modal-peta" class="d-none position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-75 flex-column justify-content-center align-items-center" style="z-index: 10500; backdrop-filter: blur(5px);">
+        <div class="w-100 p-4 text-end position-absolute top-0">
+            <span class="material-icons text-white bg-dark bg-opacity-50 rounded-circle p-1" style="font-size: 32px; cursor: pointer;" onclick="tutupPetaPenuh()">close</span>
+        </div>
+        <div class="bg-white rounded-4 shadow-lg w-100 mx-3 overflow-hidden" style="max-width: 400px;">
+            <div class="p-2 bg-primary text-white fw-bold text-center small"><span class="material-icons align-middle me-1" style="font-size: 16px;">location_on</span>Titik Koordinat Absen</div>
+            <div id="map-popup" style="height: 300px; width: 100%; z-index: 1;"></div>
+        </div>
+    </div>
     
     <!-- HALAMAN LOGIN -->
     <div id="view-login" class="min-vh-100 d-flex justify-content-center align-items-center p-3">
@@ -378,6 +388,8 @@
         let myMarker = null;
         let kordinatLokasi = "Mencari lokasi...";
         let gpsWatcher = null; 
+        let mapPopupInstance = null;
+        let mapPopupMarker = null;
         
         let antreanOffline = JSON.parse(localStorage.getItem('antreanOfflineData')) || [];
         let dataKepsekHariIni = [];
@@ -605,6 +617,13 @@ function switchView(viewId, isSistemBack = false) {
                 return; // Jangan pindah halaman, cukup tutup fotonya
             }
 
+            // TAMBAHAN: Tutup pop-up peta jika sedang terbuka
+            const modalPeta = document.getElementById('modal-peta');
+            if (modalPeta && modalPeta.classList.contains('d-flex')) {
+                tutupPetaPenuh(true); 
+                return; // Jangan pindah halaman, cukup tutup petanya
+            }
+            
             // 3. Tentukan halaman tujuan dari jejak memori HP
             let halamanTujuan = 'view-dashboard';
             
@@ -1085,6 +1104,44 @@ function switchView(viewId, isSistemBack = false) {
                 history.back();
             }
         }
+
+        function bukaPetaPenuh(lat, lng) {
+            const modal = document.getElementById('modal-peta');
+            modal.classList.remove('d-none');
+            modal.classList.add('d-flex');
+            
+            // Inisialisasi peta Leaflet jika belum ada
+            if (!mapPopupInstance) {
+                mapPopupInstance = L.map('map-popup').setView([lat, lng], 17);
+                L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    maxZoom: 19,
+                    attribution: '© Esri'
+                }).addTo(mapPopupInstance);
+                mapPopupMarker = L.marker([lat, lng]).addTo(mapPopupInstance);
+            } else {
+                // Jika sudah ada, cukup pindahkan titik kameranya
+                mapPopupInstance.setView([lat, lng], 17);
+                mapPopupMarker.setLatLng([lat, lng]);
+            }
+            
+            // Wajib: Perbaiki tampilan peta yang tertutup / abu-abu di dalam modal
+            setTimeout(() => {
+                mapPopupInstance.invalidateSize();
+            }, 200);
+
+            // Tambahkan jejak URL agar tombol back fisik HP menutup peta, bukan keluar aplikasi
+            history.pushState({ halaman: 'view-kepsek', modalPeta: true }, "", "#lihat-peta");
+        }
+
+        function tutupPetaPenuh(dariTombolBack = false) {
+            const modal = document.getElementById('modal-peta');
+            modal.classList.remove('d-flex');
+            modal.classList.add('d-none');
+            
+            if (!dariTombolBack) {
+                history.back();
+            }
+        }
         
         function cekAksesKepsek() {
             // Cek apakah ada kata "kepala sekolah" ATAU "admin" di dalam jabatannya (huruf besar/kecil otomatis terbaca)
@@ -1297,7 +1354,7 @@ function bukaMenuKepsek() {
                     alasanHtml = `<div class="text-secondary mt-1 small d-block" style="font-size: 11px; line-height: 1.3;"><strong>Alasan:</strong> ${item.alasan}</div>`;
                 }
 
-                // --- PERBAIKAN UTAMA LOKASI: FORMAT RESMI API MAPS & ANTI WEBVIEW BLOCK ---
+                // --- PERBAIKAN LOKASI: MENGGUNAKAN POPUP MODAL INTERNAL ---
                 let lokasiHtml = "";
                 if (!item.isBelum && !item.isIzin && item.lokasi && item.lokasi !== "-") {
                     let textLokasi = item.lokasi;
@@ -1307,14 +1364,11 @@ function bukaMenuKepsek() {
                         let lngClean = parseFloat(parts[1]).toFixed(6);
                         textLokasi = latClean + ", " + lngClean;
 
-                        // Menggunakan URL Universal Resmi dari Google Maps API
-                        let linkMaps = `https://www.google.com/maps/search/?api=1&query=${latClean},${lngClean}`;
-                        
-                        // Hapus target="_blank" (yang sering diblokir webview) dan ganti ke target="_top"
+                        // Ubah tag <a> menjadi <span> dengan onclick ke peta internal
                         lokasiHtml = `
-                        <a href="${linkMaps}" target="_top" class="text-primary ms-2 fw-bold text-decoration-none" style="font-size: 10px;">
+                        <span onclick="bukaPetaPenuh(${latClean}, ${lngClean})" class="text-primary ms-2 fw-bold text-decoration-none" style="font-size: 10px; cursor: pointer;">
                             <span class="material-icons align-middle" style="font-size: 11px;">location_on</span> ${textLokasi}
-                        </a>`;
+                        </span>`;
                     } else {
                         lokasiHtml = `
                         <span class="text-danger ms-2 fw-bold" style="font-size: 10px;">
