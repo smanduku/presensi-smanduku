@@ -1112,18 +1112,9 @@ function switchView(viewId, isSistemBack = false) {
             
             // Masukkan link Google Maps format Embed ke dalam iframe
             const iframe = document.getElementById('iframe-gmaps');
-            // parameter output=embed adalah trik agar gmaps bisa masuk iframe tanpa API Key
+            // PERBAIKAN: Format URL disesuaikan agar berjalan lancar di Iframe
             iframe.src = `https://maps.google.com/maps?q=${lat},${lng}&hl=id&z=17&output=embed`;
             
-            // Tambahkan jejak URL agar tombol back fisik HP menutup peta, bukan keluar aplikasi
-            history.pushState({ halaman: 'view-kepsek', modalPeta: true }, "", "#lihat-peta");
-        }
-            
-            // Wajib: Perbaiki tampilan peta yang tertutup / abu-abu di dalam modal
-            setTimeout(() => {
-                mapPopupInstance.invalidateSize();
-            }, 200);
-
             // Tambahkan jejak URL agar tombol back fisik HP menutup peta, bukan keluar aplikasi
             history.pushState({ halaman: 'view-kepsek', modalPeta: true }, "", "#lihat-peta");
         }
@@ -1132,6 +1123,9 @@ function switchView(viewId, isSistemBack = false) {
             const modal = document.getElementById('modal-peta');
             modal.classList.remove('d-flex');
             modal.classList.add('d-none');
+            
+            // Bersihkan iframe agar tidak berat di memori saat ditutup
+            document.getElementById('iframe-gmaps').src = "";
             
             if (!dariTombolBack) {
                 history.back();
@@ -1147,7 +1141,7 @@ function switchView(viewId, isSistemBack = false) {
             }
         }
 
-function bukaMenuKepsek() {
+        function bukaMenuKepsek() {
             if (!navigator.onLine) {
                 showCustomAlert("Fitur pantauan hanya bisa diakses saat perangkat Online.", 'error');
                 return;
