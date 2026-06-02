@@ -130,10 +130,10 @@
         <div class="container px-3">
             
             <!-- STATUS KONEKSI INTERNET -->
-            <div id="offline-status-indicator" class="d-none alert alert-danger text-center small p-2 mb-3 mt-n2 shadow-sm rounded-3 position-relative z-3">
-                <span class="material-icons align-middle text-danger me-1" style="font-size: 18px;">wifi_off</span>
-                <strong>Anda sedang Offline.</strong><br>
-                Fitur absen tetap bisa digunakan dan akan disimpan di HP. Jangan Lupa SINKRON saat terhubung ke internet.
+            <div id="offline-status-indicator" class="d-none alert alert-warning text-center small p-2 mb-3 mt-n2 shadow-sm rounded-3 position-relative z-3">
+                <span class="material-icons align-middle text-warning me-1" style="font-size: 18px;">wifi_off</span>
+                <strong class="text-dark">Anda sedang Offline.</strong><br>
+                <span class="text-dark">Fitur absen tetap bisa digunakan dan akan disimpan di HP. Jangan Lupa SINKRON saat terhubung ke internet.</span>
             </div>
 
             <!-- PANEL OFFLINE SYNC -->
@@ -526,21 +526,34 @@
             .catch(error => console.log("Verifikasi background tertunda (jaringan bermasalah)"));
         }
 
-        // --- UPDATE TAMPILAN STATUS OFFLINE ---
+        // --- UPDATE TAMPILAN STATUS OFFLINE (VERSI SUPER RINGAN) ---
         function updateOfflineStatusDisplay() {
             const indicator = document.getElementById('offline-status-indicator');
             if (indicator) {
-                if (!navigator.onLine) {
+                // Cek apakah kotak sedang tampil atau sembunyi saat ini
+                const sedangTampil = indicator.classList.contains('d-block');
+                
+                if (!navigator.onLine && !sedangTampil) {
+                    // Jika offline TAPI kotak belum tampil -> Munculkan!
                     indicator.classList.remove('d-none');
-                } else {
+                    indicator.classList.add('d-block');
+                } else if (navigator.onLine && sedangTampil) {
+                    // Jika online TAPI kotak masih nangkring -> Sembunyikan!
+                    indicator.classList.remove('d-block');
                     indicator.classList.add('d-none');
                 }
+                // Jika tidak ada perubahan status, diam saja (menghemat tenaga HP)
             }
         }
 
         setInterval(() => {
+            // Update jam
             document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID');
-            checkReminder(); // Cek pengingat setiap detik
+            
+            checkReminder(); 
+            
+            // KODE BARU: Cek status internet setiap detik agar tidak pernah meleset
+            updateOfflineStatusDisplay();
         }, 1000);
 
         function showCustomAlert(pesan, tipe = 'info') {
@@ -1401,7 +1414,7 @@ function switchView(viewId, isSistemBack = false) {
             container.innerHTML = htmlStr;
         }
     </script>
-    
+
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
