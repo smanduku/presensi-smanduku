@@ -1342,29 +1342,44 @@ function switchView(viewId, isSistemBack = false) {
             });
         }
 
-        // --- DETEKSI OFFLINE SUPER RESPONSIF ---
-        window.addEventListener('offline', function() {
-            const indicator = document.getElementById('offline-status-indicator');
-            if(indicator) {
-                indicator.classList.remove('d-none');
-                indicator.classList.add('d-block');
-            }
-        });
+        // --- DETEKSI OFFLINE JALUR PING (SOLUSI WEBVIEW MEMBANDEL) ---
+        let statusInternet = true;
 
-        window.addEventListener('online', function() {
-            const indicator = document.getElementById('offline-status-indicator');
-            if(indicator) {
-                indicator.classList.remove('d-block');
-                indicator.classList.add('d-none');
-            }
-            // Verifikasi akun ulang saat internet kembali menyala
-            if (currentUser.nip !== "" && currentUser.password) {
-                verifikasiBackground();
-            }
-            if(antreanOffline.length > 0 && currentUser.nip !== "") {
-                sinkronisasiOffline();
-            }
-        });
+        function cekKoneksiPing() {
+            // Mencoba mengetuk pintu server Google (mengambil file super kecil) secara diam-diam
+            // Menggunakan tambahan waktu (getTime) agar Service Worker tidak memberikan file palsu dari cache
+            fetch('https://www.google.com/favicon.ico?' + new Date().getTime(), { mode: 'no-cors', cache: 'no-store' })
+            .then(function() {
+                // KETUKAN DIJAWAB = INTERNET ADA
+                if (!statusInternet) {
+                    statusInternet = true;
+                    const indicator = document.getElementById('offline-status-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('d-block');
+                        indicator.classList.add('d-none');
+                    }
+                    // Verifikasi dan sinkronisasi jika internet baru saja kembali
+                    if (currentUser.nip !== "" && currentUser.password) verifikasiBackground();
+                    if (antreanOffline.length > 0 && currentUser.nip !== "") sinkronisasiOffline();
+                }
+            })
+            .catch(function() {
+                // KETUKAN GAGAL = INTERNET MATI TOTAL
+                if (statusInternet) {
+                    statusInternet = false;
+                    const indicator = document.getElementById('offline-status-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('d-none');
+                        indicator.classList.add('d-block');
+                    }
+                }
+            });
+        }
+
+        // Suruh aplikasi mengetuk pintu Google setiap 3 detik sekali
+        setInterval(cekKoneksiPing, 3000);
+        // Cek satu kali saat aplikasi baru pertama kali dibuka
+        setTimeout(cekKoneksiPing, 1000);
     </script>
 </body>
 </html>
