@@ -394,48 +394,8 @@
         let antreanOffline = JSON.parse(localStorage.getItem('antreanOfflineData')) || [];
         let dataKepsekHariIni = [];
         let modeSesiAktif = 'masuk'; // TAMBAHKAN INI UNTUK SAKELAR MASUK/PULANG
-        
-        // --- TAMBAHAN: FUNGSI PENGINGAT (REMINDER) ---
-        function getTodayStr() {
-            const d = new Date();
-            return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear();
-        }
-
-        function mintaIzinNotifikasi() {
-            if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
-                Notification.requestPermission();
-            }
-        }
-
-        function tampilkanNotifikasiHP(judul, pesan) {
-            if ("Notification" in window && Notification.permission === "granted") {
-                try {
-                    new Notification(judul, { body: pesan, icon: "icon.png" });
-                } catch (e) {
-                    console.log("Notifikasi background dibatasi browser.");
-                }
-            }
-            showCustomAlert(pesan, "warning");
-        }
-
-        function checkReminder() {
-            const now = new Date();
-            if (now.getHours() >= 12) {
-                const todayStr = getTodayStr();
-                const tglMasuk = localStorage.getItem('tglAbsenMasuk');
-                const statusAbsen = localStorage.getItem('statusAbsenHariIni');
-                const lastReminder = localStorage.getItem('lastReminderDate');
-
-                if (tglMasuk === todayStr && statusAbsen === 'Masuk_Sudah_Pulang_Belum' && lastReminder !== todayStr) {
-                    tampilkanNotifikasiHP("⏰ Waktu Absen Pulang", "Tabe Guru, sudah lewat jam 12 siang. Jangan lupa untuk mengisi Absen Pulang hari ini ya!");
-                    localStorage.setItem('lastReminderDate', todayStr);
-                }
-            }
-        }
-        // ---------------------------------------------
 
         window.onload = function() {
-            updateOfflineStatusDisplay(); 
             
             if (!navigator.onLine) {
                 showCustomAlert("Aplikasi dibuka tanpa koneksi internet (Mode Offline). Anda tetap bisa melakukan absen.", 'warning');
@@ -463,8 +423,6 @@
                 history.replaceState({ halaman: halamanTujuan }, "", "#" + halamanTujuan);
                 updateOfflineBadge(); 
 
-                mintaIzinNotifikasi(); // Meminta izin notif dari HP guru saat masuk
-
                 // --- CEK PASSWORD LATAR BELAKANG ---
                 if (navigator.onLine && currentUser.password) {
                     verifikasiBackground();
@@ -482,24 +440,6 @@
                 switchView('view-login', true);
                 }
                 };
-
-        // Memantau status internet HP (Otomatis sinkron jika online)
-        window.addEventListener('online', function() {
-            updateOfflineStatusDisplay();
-            
-            // Verifikasi akun ulang saat internet kembali menyala
-            if (currentUser.nip !== "" && currentUser.password) {
-                verifikasiBackground();
-            }
-
-            if(antreanOffline.length > 0 && currentUser.nip !== "") {
-                sinkronisasiOffline();
-            }
-        });
-        
-        window.addEventListener('offline', function() {
-            updateOfflineStatusDisplay();
-        });
 
         // --- FUNGSI VERIFIKASI BACKGROUND (KICK JIKA PASSWORD BERUBAH) ---
         function verifikasiBackground() {
@@ -525,35 +465,21 @@
             })
             .catch(error => console.log("Verifikasi background tertunda (jaringan bermasalah)"));
         }
-
-        // --- UPDATE TAMPILAN STATUS OFFLINE (VERSI SUPER RINGAN) ---
-        function updateOfflineStatusDisplay() {
-            const indicator = document.getElementById('offline-status-indicator');
-            if (indicator) {
-                // Cek apakah kotak sedang tampil atau sembunyi saat ini
-                const sedangTampil = indicator.classList.contains('d-block');
-                
-                if (!navigator.onLine && !sedangTampil) {
-                    // Jika offline TAPI kotak belum tampil -> Munculkan!
+        
+        // Pengecekan ekstra saat aplikasi baru pertama kali dibuka
+        window.addEventListener('load', function() {
+            if (!navigator.onLine) {
+                const indicator = document.getElementById('offline-status-indicator');
+                if(indicator) {
                     indicator.classList.remove('d-none');
                     indicator.classList.add('d-block');
-                } else if (navigator.onLine && sedangTampil) {
-                    // Jika online TAPI kotak masih nangkring -> Sembunyikan!
-                    indicator.classList.remove('d-block');
-                    indicator.classList.add('d-none');
                 }
-                // Jika tidak ada perubahan status, diam saja (menghemat tenaga HP)
             }
-        }
+        });
 
         setInterval(() => {
             // Update jam
             document.getElementById('clock').innerText = new Date().toLocaleTimeString('id-ID');
-            
-            checkReminder(); 
-            
-            // KODE BARU: Cek status internet setiap detik agar tidak pernah meleset
-            updateOfflineStatusDisplay();
         }, 1000);
 
         function showCustomAlert(pesan, tipe = 'info') {
@@ -856,16 +782,6 @@ function switchView(viewId, isSistemBack = false) {
                 foto: currentFotoBase64,
                 waktuOffline: new Date().getTime() 
             };
-
-            // --- CATAT STATUS ABSEN LOKAL UNTUK PENGINGAT ---
-            const todayStr = getTodayStr();
-            if (jenisAbsenAktif === "Masuk") {
-                localStorage.setItem('tglAbsenMasuk', todayStr);
-                localStorage.setItem('statusAbsenHariIni', 'Masuk_Sudah_Pulang_Belum');
-            } else if (jenisAbsenAktif === "Pulang") {
-                localStorage.setItem('statusAbsenHariIni', 'Sudah_Pulang');
-            }
-            // ------------------------------------------------
 
             if (!navigator.onLine) {
                 antreanOffline.push(payloadAbsen); 
@@ -1413,9 +1329,7 @@ function switchView(viewId, isSistemBack = false) {
             });
             container.innerHTML = htmlStr;
         }
-    </script>
 
-    <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('./sw.js')
@@ -1427,8 +1341,30 @@ function switchView(viewId, isSistemBack = false) {
                 });
             });
         }
+
+        // --- DETEKSI OFFLINE SUPER RESPONSIF ---
+        window.addEventListener('offline', function() {
+            const indicator = document.getElementById('offline-status-indicator');
+            if(indicator) {
+                indicator.classList.remove('d-none');
+                indicator.classList.add('d-block');
+            }
+        });
+
+        window.addEventListener('online', function() {
+            const indicator = document.getElementById('offline-status-indicator');
+            if(indicator) {
+                indicator.classList.remove('d-block');
+                indicator.classList.add('d-none');
+            }
+            // Verifikasi akun ulang saat internet kembali menyala
+            if (currentUser.nip !== "" && currentUser.password) {
+                verifikasiBackground();
+            }
+            if(antreanOffline.length > 0 && currentUser.nip !== "") {
+                sinkronisasiOffline();
+            }
+        });
     </script>
-</body>
-</html>
 </body>
 </html>
