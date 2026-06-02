@@ -1,4 +1,4 @@
-const CACHE_NAME = 'presensi-smanduku-v5'; // Ganti ke v5
+const CACHE_NAME = 'presensi-smanduku-v7'; // Ganti ke v7
 
 // Daftar file utama yang wajib disimpan di memori HP guru agar aplikasi bisa terbuka saat offline
 const urlsToCache = [

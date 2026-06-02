@@ -422,6 +422,9 @@
                 switchView(halamanTujuan, true); 
                 history.replaceState({ halaman: halamanTujuan }, "", "#" + halamanTujuan);
                 updateOfflineBadge(); 
+                
+                // KODE BARU: Jalankan pengecekan pengingat pulang
+                cekPengingatPulangInApp();
 
                 // --- CEK PASSWORD LATAR BELAKANG ---
                 if (navigator.onLine && currentUser.password) {
@@ -786,6 +789,14 @@ function switchView(viewId, isSistemBack = false) {
                 foto: currentFotoBase64,
                 waktuLokal: formatWaktuLokal // KODE BARU: Mengunci waktu asli
             };
+
+            // --- KODE BARU PENCATATAN STATUS UNTUK PENGINGAT ---
+            const tglBuku = getTanggalLokal();
+            if (jenisAbsenAktif === "Masuk") {
+                localStorage.setItem('statusAbsenLokal_' + tglBuku, 'SUDAH_MASUK');
+            } else if (jenisAbsenAktif === "Pulang") {
+                localStorage.setItem('statusAbsenLokal_' + tglBuku, 'SUDAH_PULANG');
+            }
 
             if (!navigator.onLine) {
                 antreanOffline.push(payloadAbsen); 
@@ -1357,6 +1368,34 @@ function switchView(viewId, isSistemBack = false) {
                     console.log('Gagal mengaktifkan pengaman offline:', err);
                 });
             });
+        }
+        // =========================================================
+        // FITUR PENGINGAT ABSEN PULANG (HANYA SAAT APLIKASI DIBUKA)
+        // =========================================================
+        function getTanggalLokal() {
+            const d = new Date();
+            return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear();
+        }
+
+        function cekPengingatPulangInApp() {
+            const d = new Date();
+            const jam = d.getHours();
+            
+            // Jika sudah jam 12 siang ke atas
+            if (jam >= 12) {
+                const tglHariIni = getTanggalLokal();
+                const statusAbsen = localStorage.getItem('statusAbsenLokal_' + tglHariIni);
+                const sudahDiingatkan = localStorage.getItem('diingatkanPulangLokal_' + tglHariIni);
+
+                // Jika catatannya sudah absen "Masuk" TAPI belum diingatkan hari ini
+                if (statusAbsen === 'SUDAH_MASUK' && sudahDiingatkan !== 'YA') {
+                    // Munculkan Pop-up Biru yang ramah
+                    showCustomAlert("Tabe Guru! Anda belum mengisi Absen Pulang hari ini.", "info");
+                    
+                    // Kunci agar tidak spam terus-menerus jika guru pindah halaman
+                    localStorage.setItem('diingatkanPulangLokal_' + tglHariIni, 'YA');
+                }
+            }
         }
 
         // --- DETEKSI OFFLINE JALUR PING (SOLUSI WEBVIEW MEMBANDEL) ---
