@@ -770,6 +770,10 @@ function switchView(viewId, isSistemBack = false) {
         }
 
         function kirimAbsenFinal() {
+            // Catat waktu HP secara presisi saat tombol kirim ditekan
+            const waktuJepret = new Date();
+            const formatWaktuLokal = waktuJepret.toLocaleString('id-ID'); // Format: DD/MM/YYYY, HH:MM:SS
+
             const payloadAbsen = { 
                 action: 'absen', 
                 nip: currentUser.nip, 
@@ -780,7 +784,7 @@ function switchView(viewId, isSistemBack = false) {
                 jenis: jenisAbsenAktif,
                 lokasi: kordinatLokasi,
                 foto: currentFotoBase64,
-                waktuOffline: new Date().getTime() 
+                waktuLokal: formatWaktuLokal // KODE BARU: Mengunci waktu asli
             };
 
             if (!navigator.onLine) {
@@ -855,7 +859,20 @@ function switchView(viewId, isSistemBack = false) {
             })
             .then(response => response.json())
             .then(data => {
-                kirimDataAntrean(index + 1);
+                // --- PERBAIKAN LOGIKA SINKRONISASI ---
+                if (data.status === 'success') {
+                    // Jika sukses masuk ke sheet, baru lanjut kirim data berikutnya
+                    kirimDataAntrean(index + 1);
+                } else {
+                    // JIKA SERVER MENOLAK (Misal: Terlambat / Sudah Absen)
+                    toggleLoading(false);
+                    showCustomAlert("Ditolak Server: " + data.message, 'error');
+                    
+                    // Simpan kembali sisa data yang tertunda ke HP (JANGAN DIHAPUS)
+                    antreanOffline = antreanOffline.slice(index);
+                    localStorage.setItem('antreanOfflineData', JSON.stringify(antreanOffline));
+                    updateOfflineBadge();
+                }
             })
             .catch(error => {
                 antreanOffline = antreanOffline.slice(index);
