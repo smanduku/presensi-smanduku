@@ -1401,5 +1401,21 @@ function switchView(viewId, isSistemBack = false) {
             container.innerHTML = htmlStr;
         }
     </script>
+    
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                .then(function(reg) {
+                    console.log('Robot Pengaman Offline Aktif! Scope:', reg.scope);
+                })
+                .catch(function(err) {
+                    console.log('Gagal mengaktifkan pengaman offline:', err);
+                });
+            });
+        }
+    </script>
+</body>
+</html>
 </body>
 </html>
