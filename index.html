@@ -169,26 +169,34 @@
                         <h6 class="fw-bold mb-0 small">Izin / Sakit</h6>
                     </div>
                 </div>
+
+                <!-- Menu Kepsek -->
                 <div class="col-12 d-none" id="menu-kepsek">
-                    <div class="card menu-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3);" onclick="bukaMenuKepsek()">
-                        <div class="icon-box mx-auto text-white" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(5px);">
-                            <span class="material-icons">admin_panel_settings</span>
+                    <div class="card p-2" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 12px; box-shadow: 0 4px 15px rgba(118, 75, 162, 0.3); cursor: pointer;" onclick="bukaMenuKepsek()">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="rounded-circle p-2 me-3 d-flex" style="background: rgba(255,255,255,0.2); backdrop-filter: blur(5px);">
+                                <span class="material-icons text-white" style="font-size: 24px;">admin_panel_settings</span>
+                            </div>
+                            <div class="text-start">
+                                <!-- Tambahan line-height di h6 dan setelan margin/line-height di small -->
+                                <h6 class="fw-bold mb-0 text-white" style="font-size: 14px; line-height: 1.1;">Pantauan Kepala Sekolah</h6>
+                                <small class="d-block" style="font-size: 10px; opacity: 0.9; line-height: 1; margin-top: 3px;">Lihat data kehadiran guru hari ini</small>
+                            </div>
                         </div>
-                        <h6 class="fw-bold mb-1 small text-white">Pantauan Kepala Sekolah</h6>
-                        <small style="font-size: 10px; opacity: 0.8;">Lihat data kehadiran guru hari ini</small>
                     </div>
                 </div>
             </div>
 
             <!-- Peta Lokasi -->
             <div class="map-container mb-3">
-                <h6 class="fw-bold mb-2 small text-muted"><span class="material-icons align-middle" style="font-size: 16px;">my_location</span> Titik Lokasi Anda</h6>
+                <!-- Tambahan text-center di baris bawah ini -->
+                <h6 class="fw-bold mb-2 small text-muted text-center"><span class="material-icons align-middle" style="font-size: 16px;">my_location</span> Titik Lokasi Anda</h6>
                 <div id="map"></div>
                 <p id="dashboard-info-lokasi" class="small mt-2 mb-0 text-center fw-bold text-warning">Mencari sinyal GPS...</p>
             </div>
             
-            <div class="text-center mt-4 mb-2">
-                <small class="text-muted fw-bold d-block" style="font-size: 12px; letter-spacing: 0.5px;">Powered by SMA Negeri 2 Kulisusu</small>
+            <div class="text-center mt-4 mb-2" style="line-height: 1;">
+                <small class="text-muted fw-bold" style="font-size: 12px; letter-spacing: 0.5px;">Powered by SMA Negeri 2 Kulisusu</small><br>
                 <small class="text-muted" style="font-size: 10px; letter-spacing: 0.5px;">Buton Utara, Sulawesi Tenggara</small>
             </div>
         </div>
@@ -388,8 +396,6 @@
         let myMarker = null;
         let kordinatLokasi = "Mencari lokasi...";
         let gpsWatcher = null; 
-        let mapPopupInstance = null;
-        let mapPopupMarker = null;
         
         let antreanOffline = JSON.parse(localStorage.getItem('antreanOfflineData')) || [];
         let dataKepsekHariIni = [];
@@ -468,17 +474,6 @@
             })
             .catch(error => console.log("Verifikasi background tertunda (jaringan bermasalah)"));
         }
-        
-        // Pengecekan ekstra saat aplikasi baru pertama kali dibuka
-        window.addEventListener('load', function() {
-            if (!navigator.onLine) {
-                const indicator = document.getElementById('offline-status-indicator');
-                if(indicator) {
-                    indicator.classList.remove('d-none');
-                    indicator.classList.add('d-block');
-                }
-            }
-        });
 
         setInterval(() => {
             // Update jam
