@@ -428,9 +428,6 @@
                 switchView(halamanTujuan, true); 
                 history.replaceState({ halaman: halamanTujuan }, "", "#" + halamanTujuan);
                 updateOfflineBadge(); 
-                
-                // KODE BARU: Jalankan pengecekan pengingat pulang
-                cekPengingatPulangInApp();
 
                 // --- CEK PASSWORD LATAR BELAKANG ---
                 if (navigator.onLine && currentUser.password) {
@@ -510,7 +507,7 @@
             document.getElementById('loading-overlay').classList.toggle('d-none', !show);
         }
 
-function switchView(viewId, isSistemBack = false) {
+        function switchView(viewId, isSistemBack = false) {
             // Sembunyikan semua halaman
             document.getElementById('view-login').classList.add('d-none');
             document.getElementById('view-dashboard').classList.add('d-none');
@@ -768,6 +765,15 @@ function switchView(viewId, isSistemBack = false) {
         }
 
         function kirimAbsenFinal() {
+            // --- KODE BARU: CEK FAKE GPS VIA ANDROID NATIVE ---
+            if (typeof AndroidApp !== 'undefined') {
+                let terdeteksiTuyul = AndroidApp.cekFakeGPS();
+                if (terdeteksiTuyul) {
+                    showCustomAlert("🚨 Absen Ditolak! Sistem mendeteksi Anda menggunakan aplikasi Fake GPS / Lokasi Palsu.", "error");
+                    return; // Menghentikan fungsi, absen TIDAK AKAN dikirim!
+                }
+            }
+
             // Catat waktu HP secara presisi saat tombol kirim ditekan
             const waktuJepret = new Date();
             const formatWaktuLokal = waktuJepret.toLocaleString('id-ID'); // Format: DD/MM/YYYY, HH:MM:SS
@@ -782,16 +788,30 @@ function switchView(viewId, isSistemBack = false) {
                 jenis: jenisAbsenAktif,
                 lokasi: kordinatLokasi,
                 foto: currentFotoBase64,
-                waktuLokal: formatWaktuLokal // KODE BARU: Mengunci waktu asli
+                waktuLokal: formatWaktuLokal
             };
 
-            // --- KODE BARU PENCATATAN STATUS UNTUK PENGINGAT ---
+            // ========================================================
+            // --- KODE BARU PENCATATAN STATUS UNTUK ALARM ANDROID ---
+            // ========================================================
             const tglBuku = getTanggalLokal();
+            
             if (jenisAbsenAktif === "Masuk") {
+                // Simpan di web lokal (untuk jaga-jaga)
                 localStorage.setItem('statusAbsenLokal_' + tglBuku, 'SUDAH_MASUK');
+                // LAPOR KE MESIN ANDROID: Agar alarm siang dinyalakan!
+                if (typeof AndroidApp !== 'undefined') {
+                    AndroidApp.simpanStatusAbsen("SUDAH_MASUK", tglBuku);
+                }
             } else if (jenisAbsenAktif === "Pulang") {
+                // Simpan di web lokal
                 localStorage.setItem('statusAbsenLokal_' + tglBuku, 'SUDAH_PULANG');
+                // LAPOR KE MESIN ANDROID: Agar alarm siang dimatikan/dibatalkan!
+                if (typeof AndroidApp !== 'undefined') {
+                    AndroidApp.simpanStatusAbsen("SUDAH_PULANG", tglBuku);
+                }
             }
+            // ========================================================
 
             if (!navigator.onLine) {
                 antreanOffline.push(payloadAbsen); 
@@ -953,24 +973,53 @@ function switchView(viewId, isSistemBack = false) {
         }
 
         function bukaRiwayat() {
+            switchView('view-riwayat');
+            
+            // 1. Cek apakah ada riwayat yang sudah tersimpan di HP
+            let cachedData = localStorage.getItem('riwayatLokal_' + currentUser.nip);
+            
+            if (cachedData) {
+                // Tampilkan data yang ada di HP secara instan!
+                tampilkanRiwayat(JSON.parse(cachedData));
+                // Tambahkan teks kecil bahwa sedang mengecek pembaruan ke server
+                document.getElementById('tempat-riwayat').insertAdjacentHTML('afterbegin', '<div id="sync-riwayat-alert" class="alert alert-primary text-center py-1 mb-3 border-0 d-flex align-items-center justify-content-center fw-bold" style="font-size: 11px; background: #e8f0fe;"><span class="spinner-border spinner-border-sm me-2" role="status"></span> Mengecek pembaruan riwayat...</div>');
+            } else {
+                // Jika belum ada sama sekali, tampilkan loading besar
+                document.getElementById('tempat-riwayat').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Memuat data riwayat...</p></div>';
+            }
+
+            // 2. Jika HP offline, hentikan pencarian ke server
             if (!navigator.onLine) {
-                showCustomAlert("Riwayat hanya bisa dilihat jika ada koneksi internet.", 'error');
+                let alertSync = document.getElementById('sync-riwayat-alert');
+                if (alertSync) alertSync.remove(); // Hapus tulisan mengecek pembaruan
+                
+                if (!cachedData) {
+                    document.getElementById('tempat-riwayat').innerHTML = '<div class="text-center mt-5"><span class="material-icons text-muted" style="font-size: 64px;">wifi_off</span><p class="mt-2 text-muted">Anda Offline. Riwayat belum tersimpan di HP.</p></div>';
+                }
                 return;
             }
-            switchView('view-riwayat');
-            document.getElementById('tempat-riwayat').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Memuat data riwayat...</p></div>';
             
+            // 3. Tarik data terbaru dari server
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'riwayat', nip: currentUser.nip })
             })
             .then(response => response.json())
             .then(data => {
-                if(data.status === 'success') tampilkanRiwayat(data.data);
-                else document.getElementById('tempat-riwayat').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat riwayat.</p>';
+                if(data.status === 'success') {
+                    // Simpan data terbaru ke memori HP untuk dibuka besok-besok
+                    localStorage.setItem('riwayatLokal_' + currentUser.nip, JSON.stringify(data.data));
+                    
+                    // Render ulang tampilan dengan data yang baru (otomatis menimpa yang lama dan menghilangkan tulisan mengecek pembaruan)
+                    tampilkanRiwayat(data.data);
+                } else {
+                    if (!cachedData) document.getElementById('tempat-riwayat').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat riwayat.</p>';
+                    else document.getElementById('sync-riwayat-alert')?.remove();
+                }
             })
             .catch(error => {
-                document.getElementById('tempat-riwayat').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi.</p>';
+                if (!cachedData) document.getElementById('tempat-riwayat').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi.</p>';
+                else document.getElementById('sync-riwayat-alert')?.remove();
             });
         }
 
@@ -1127,12 +1176,10 @@ function switchView(viewId, isSistemBack = false) {
         }
 
         function tarikDataKepsek() {
-            document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Menarik data presensi...</p></div>';
-            
             // Ambil tanggal dari input
             let tglInput = document.getElementById('tanggal-pantau').value;
             
-            // --- PERBAIKAN: Simpan tanggal yang sedang diklik ke memori HP ---
+            // Simpan tanggal yang sedang diklik ke memori HP
             sessionStorage.setItem('kepsekLastDate', tglInput);
             
             let tglFormatted = "";
@@ -1141,6 +1188,38 @@ function switchView(viewId, isSistemBack = false) {
                 tglFormatted = parts[2] + "-" + parts[1] + "-" + parts[0];
             }
 
+            // --- KODE BARU: CEK CACHE LOKAL BERDASARKAN TANGGAL ---
+            let cacheKey = 'kepsekDataLokal_' + tglFormatted;
+            let cachedData = localStorage.getItem(cacheKey);
+
+            if (cachedData) {
+                // Jika data lokal ada, langsung render secepat kilat!
+                dataKepsekHariIni = JSON.parse(cachedData);
+                gantiSesiPantau(); 
+                
+                // Tambahkan tulisan mengecek pembaruan di bagian atas daftar
+                document.getElementById('tempat-data-kepsek').insertAdjacentHTML('afterbegin', '<div id="sync-kepsek-alert" class="alert alert-primary text-center py-1 mb-3 border-0 d-flex align-items-center justify-content-center fw-bold" style="font-size: 11px; background: #e8f0fe;"><span class="spinner-border spinner-border-sm me-2" role="status"></span> Memuat data absen terbaru...</div>');
+            } else {
+                // Jika kosong, tampilkan loading besar dan kosongkan angka statistik
+                document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-2 text-muted">Menarik data presensi...</p></div>';
+                document.getElementById('kepsek-hadir').innerText = "-";
+                document.getElementById('kepsek-belum').innerText = "-";
+                document.getElementById('kepsek-terlambat').innerText = "-";
+                document.getElementById('kepsek-izin').innerText = "-";
+            }
+
+            // Jika sedang offline, hentikan pencarian ke server
+            if (!navigator.onLine) {
+                let alertSync = document.getElementById('sync-kepsek-alert');
+                if (alertSync) alertSync.remove(); // Hapus tulisan mengecek pembaruan
+                
+                if (!cachedData) {
+                    document.getElementById('tempat-data-kepsek').innerHTML = '<div class="text-center mt-5"><span class="material-icons text-muted" style="font-size: 64px;">wifi_off</span><p class="mt-2 text-muted">Anda Offline. Data tanggal ini belum tersimpan di HP.</p></div>';
+                }
+                return;
+            }
+
+            // --- TARIK DATA TERBARU DARI SERVER ---
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 body: JSON.stringify({ action: 'pantau_kepsek', tanggal: tglFormatted })
@@ -1148,17 +1227,22 @@ function switchView(viewId, isSistemBack = false) {
             .then(response => response.json())
             .then(res => {
                 if(res.status === 'success') {
+                    // Simpan hasil ke memori HP untuk dibuka besok-besok
+                    localStorage.setItem(cacheKey, JSON.stringify(res.data));
+                    
                     dataKepsekHariIni = res.data;
-                    // --- PERBAIKAN: Hapus baris yang memaksa dropdown kembali ke 'masuk' ---
-                    gantiSesiPantau(); // Langsung render sesuai sesi aktif saat ini
+                    gantiSesiPantau(); // Render ulang otomatis (menimpa data lama & menghilangkan tulisan update)
                 } else {
-                    document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat data presensi.</p>';
+                    if (!cachedData) document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Gagal memuat data presensi.</p>';
+                    else document.getElementById('sync-kepsek-alert')?.remove();
                 }
             })
             .catch(error => {
-                document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi saat memuat data.</p>';
+                if (!cachedData) document.getElementById('tempat-data-kepsek').innerHTML = '<p class="text-center text-danger mt-5">Terjadi kesalahan koneksi saat memuat data.</p>';
+                else document.getElementById('sync-kepsek-alert')?.remove();
             });
         }
+
         // FUNGSI UNTUK SAKELAR PAGI / SIANG
         function gantiSesiPantau() {
             modeSesiAktif = document.getElementById('pilih-sesi-pantau').value;
@@ -1358,6 +1442,19 @@ function switchView(viewId, isSistemBack = false) {
                 navigator.serviceWorker.register('./sw.js')
                 .then(function(reg) {
                     console.log('Robot Pengaman Offline Aktif! Scope:', reg.scope);
+                    
+                    // --- FITUR AUTO-REFRESH JIKA ADA UPDATE VERSI BARU ---
+                    reg.onupdatefound = function() {
+                        const installingWorker = reg.installing;
+                        installingWorker.onstatechange = function() {
+                            if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                // Versi baru ditemukan dan sudah didownload
+                                console.log("Versi baru aplikasi tersedia. Memperbarui tampilan...");
+                                // Paksa reload agar langsung pakai versi terbaru
+                                window.location.reload();
+                            }
+                        };
+                    };
                 })
                 .catch(function(err) {
                     console.log('Gagal mengaktifkan pengaman offline:', err);
@@ -1370,27 +1467,6 @@ function switchView(viewId, isSistemBack = false) {
         function getTanggalLokal() {
             const d = new Date();
             return d.getDate() + "-" + (d.getMonth() + 1) + "-" + d.getFullYear();
-        }
-
-        function cekPengingatPulangInApp() {
-            const d = new Date();
-            const jam = d.getHours();
-            
-            // Jika sudah jam 12 siang ke atas
-            if (jam >= 12) {
-                const tglHariIni = getTanggalLokal();
-                const statusAbsen = localStorage.getItem('statusAbsenLokal_' + tglHariIni);
-                const sudahDiingatkan = localStorage.getItem('diingatkanPulangLokal_' + tglHariIni);
-
-                // Jika catatannya sudah absen "Masuk" TAPI belum diingatkan hari ini
-                if (statusAbsen === 'SUDAH_MASUK' && sudahDiingatkan !== 'YA') {
-                    // Munculkan Pop-up Biru yang ramah
-                    showCustomAlert("Tabe Guru! Anda belum mengisi Absen Pulang hari ini.", "info");
-                    
-                    // Kunci agar tidak spam terus-menerus jika guru pindah halaman
-                    localStorage.setItem('diingatkanPulangLokal_' + tglHariIni, 'YA');
-                }
-            }
         }
 
         // --- DETEKSI OFFLINE JALUR PING (SOLUSI WEBVIEW MEMBANDEL) ---

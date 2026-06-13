@@ -1,10 +1,16 @@
-const CACHE_NAME = 'presensi-smanduku-v8'; // Ganti ke v8
+const CACHE_NAME = 'presensi-smanduku-v9'; // Silakan naikkan angkanya setiap kali ada perubahan HTML
 
-// Daftar file utama yang wajib disimpan di memori HP guru agar aplikasi bisa terbuka saat offline
+// Daftar file utama yang wajib disimpan di memori HP guru agar aplikasi kebal offline
 const urlsToCache = [
   './',
   './index.html',
-  './icon.png'
+  './icon.png',
+  // --- TAMBAHAN WAJIB: Cache Desain & Ikon agar tidak berantakan saat offline ---
+  'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
+  'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+  'https://fonts.googleapis.com/icon?family=Material+Icons',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+  'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
 ];
 
 // 1. Tahap Install: Ambil file di atas dari internet dan simpan di memori HP
@@ -37,7 +43,7 @@ self.addEventListener('activate', event => {
 
 // 3. Tahap Fetch (Mencegat Jaringan): Jika offline, langsung ambil halaman dari memori HP
 self.addEventListener('fetch', event => {
-  // Hanya cegat permintaan dokumen halaman utama/aset lokal, jangan cegat request data ke Google Apps Script (POST)
+  // Hanya cegat permintaan dokumen halaman utama/aset lokal, jangan cegat request data POST
   if (event.request.method === 'GET') {
     event.respondWith(
       caches.match(event.request)
