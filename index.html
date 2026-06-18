@@ -867,13 +867,20 @@
             kirimDataAntrean(0);
         }
 
-        function kirimDataAntrean(index) {
+        function kirimDataAntrean(index, jumlahSukses = 0, jumlahDitolak = 0) {
+            // Jika semua antrean sudah selesai diproses
             if (index >= antreanOffline.length) {
                 antreanOffline = [];
                 localStorage.removeItem('antreanOfflineData');
                 updateOfflineBadge();
                 toggleLoading(false);
-                showCustomAlert("Semua absen offline berhasil disinkronkan!", 'success');
+                
+                // Buat laporan akhir yang rapi untuk guru
+                let pesanAkhir = "Sinkronisasi selesai! " + jumlahSukses + " data berhasil masuk.";
+                if (jumlahDitolak > 0) {
+                    pesanAkhir += " (" + jumlahDitolak + " data diabaikan karena Anda sudah terkonfirmasi absen sebelumnya).";
+                }
+                showCustomAlert(pesanAkhir, 'success');
                 return;
             }
 
@@ -885,27 +892,23 @@
             })
             .then(response => response.json())
             .then(data => {
-                // --- PERBAIKAN LOGIKA SINKRONISASI ---
+                // --- LOGIKA CERDAS BARU ---
                 if (data.status === 'success') {
-                    // Jika sukses masuk ke sheet, baru lanjut kirim data berikutnya
-                    kirimDataAntrean(index + 1);
+                    // Jika sukses masuk ke sheet, hitung sebagai sukses dan lanjut ke data berikutnya
+                    kirimDataAntrean(index + 1, jumlahSukses + 1, jumlahDitolak);
                 } else {
-                    // JIKA SERVER MENOLAK (Misal: Terlambat / Sudah Absen)
-                    toggleLoading(false);
-                    showCustomAlert("Ditolak Server: " + data.message, 'error');
-                    
-                    // Simpan kembali sisa data yang tertunda ke HP (JANGAN DIHAPUS)
-                    antreanOffline = antreanOffline.slice(index);
-                    localStorage.setItem('antreanOfflineData', JSON.stringify(antreanOffline));
-                    updateOfflineBadge();
+                    // JIKA SERVER MENOLAK (Misal: Guru double absen / Sudah Absen)
+                    // Data dianggap usang/tidak valid. Jangan disimpan lagi! Langsung LEWATI dan hapus.
+                    kirimDataAntrean(index + 1, jumlahSukses, jumlahDitolak + 1);
                 }
             })
             .catch(error => {
-                antreanOffline = antreanOffline.slice(index);
+                // HANYA BERHENTI JIKA MURNI MASALAH JARINGAN (Internet mati saat proses kirim)
+                antreanOffline = antreanOffline.slice(index); // Potong dan simpan sisa data yang belum terkirim
                 localStorage.setItem('antreanOfflineData', JSON.stringify(antreanOffline));
                 updateOfflineBadge();
                 toggleLoading(false);
-                showCustomAlert("Koneksi terputus saat sinkronisasi. Sisa data akan dikirim nanti.", 'error');
+                showCustomAlert("Koneksi terputus di tengah jalan. Sisa " + antreanOffline.length + " data masih aman tersimpan di HP.", 'error');
             });
         }
 

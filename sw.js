@@ -1,4 +1,4 @@
-const CACHE_NAME = 'presensi-smanduku-v9'; // Silakan naikkan angkanya setiap kali ada perubahan HTML
+const CACHE_NAME = 'presensi-smanduku-v10'; // Silakan naikkan angkanya setiap kali ada perubahan HTML
 
 // Daftar file utama yang wajib disimpan di memori HP guru agar aplikasi kebal offline
 const urlsToCache = [
